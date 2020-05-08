@@ -832,6 +832,25 @@ x += 1
             d[0].SourceSpan.Should().Be(2, 1, 2, 2);
         }
 
+        [TestMethod, Priority(0)]
+        public async Task UserFunctionLocalsWithStub() {
+            const string code = @"
+class A1: 
+    def M1(self, a: str, b: int, c):
+        x = a
+        return x; 
+
+x = A1.M1()
+";
+            const string stubCode = @"
+class A1: 
+    def M1(self) -> int:
+        pass
+";
+            await TestData.CreateTestSpecificFileAsync("module.pyi", stubCode);
+            var d = await LintAsync(code);
+            d.Should().BeEmpty();
+        }
 
         private async Task<IReadOnlyList<DiagnosticsEntry>> LintAsync(string code, InterpreterConfiguration configuration = null) {
             var analysis = await GetAnalysisAsync(code, configuration ?? PythonVersions.LatestAvailable3X);

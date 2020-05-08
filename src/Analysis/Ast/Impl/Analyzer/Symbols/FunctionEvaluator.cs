@@ -46,9 +46,9 @@ namespace Microsoft.Python.Analysis.Analyzer.Symbols {
         private FunctionDefinition FunctionDefinition { get; }
 
         public override void Evaluate() {
-            var stub = SymbolTable.ReplacedByStubs.Contains(Target)
-                       || _function.DeclaringModule.ModuleType == ModuleType.Stub
-                       || Module.ModuleType == ModuleType.Specialized;
+            var fdm = _function.DeclaringModule;
+            var replacedByStub = SymbolTable.ReplacedByStubs.Contains(Target) && fdm.ModuleType != ModuleType.User;
+            var stub = replacedByStub || fdm.ModuleType == ModuleType.Stub || Module.ModuleType == ModuleType.Specialized;
 
             using (Eval.OpenScope(_function.DeclaringModule, FunctionDefinition, out _)) {
                 var returnType = TryDetermineReturnValue();
@@ -73,7 +73,7 @@ namespace Microsoft.Python.Analysis.Analyzer.Symbols {
                             v => v.GetPythonType<IPythonClassType>() == null &&
                                  v.GetPythonType<IPythonFunctionType>() == null)
                         ) {
-                            ((VariableCollection)Eval.CurrentScope.Variables).Clear();
+                        ((VariableCollection)Eval.CurrentScope.Variables).Clear();
                     }
                 }
             }

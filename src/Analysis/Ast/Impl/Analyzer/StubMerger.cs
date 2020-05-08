@@ -206,12 +206,17 @@ namespace Microsoft.Python.Analysis.Analyzer {
                 if (sourceMember.IsUnknown()) {
                     continue; // Do not add unknowns to the stub.
                 }
+                
                 var sourceMemberType = sourceMember?.GetPythonType();
-                if (sourceMemberType is IPythonClassMember cm && !cm.DeclaringModule.Equals(sourceType.DeclaringModule)) {
-                    continue; // Only take members from this class and not from bases.
-                }
-                if (!IsFromThisModuleOrSubmodules(sourceMemberType)) {
-                    continue; // Member does not come from module or its submodules.
+                if (!(sourceMember is IPythonInstance)) {
+                    if (sourceMemberType is IPythonClassMember cm) {
+                        if (!cm.DeclaringModule.Equals(sourceType.DeclaringModule)) {
+                            continue; // Only take typeinfo-type members from this class and not from bases.
+                        }
+                    }
+                    if (!IsFromThisModuleOrSubmodules(sourceMemberType)) {
+                        continue; // Member does not come from module or its submodules.
+                    }
                 }
 
                 var stubMember = stubType.GetMember(name);

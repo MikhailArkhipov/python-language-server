@@ -84,5 +84,29 @@ class A1:
             analysis.Should().HaveVariable("x")
                 .Which.Should().HaveType(BuiltinTypeId.Int);
         }
+
+        [TestMethod, Priority(0)]
+        public async Task UserFunctionLocalsWithStub() {
+            const string code = @"
+class A1: 
+    def M1(self, a: str, b: int, c):
+        x = a
+        return x; 
+
+x = A1.M1()
+";
+            const string stubCode = @"
+class A1: 
+    def M1(self) -> int:
+        pass
+";
+            await TestData.CreateTestSpecificFileAsync("module.pyi", stubCode);
+            var analysis = await GetAnalysisAsync(code);
+
+            
+            analysis.Document.Stub.Should().NotBeNull();
+            analysis.Should().HaveVariable("x")
+                .Which.Should().HaveType(BuiltinTypeId.Int);
+        }
     }
 }

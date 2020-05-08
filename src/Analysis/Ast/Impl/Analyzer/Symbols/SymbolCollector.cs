@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Python.Analysis.Analyzer.Evaluation;
+using Microsoft.Python.Analysis.Modules;
 using Microsoft.Python.Analysis.Types;
 using Microsoft.Python.Analysis.Values;
 using Microsoft.Python.Core;
@@ -225,6 +226,12 @@ namespace Microsoft.Python.Analysis.Analyzer.Symbols {
                 }
                 member = mc.GetMember(memberNameChain[i]);
                 if (member == null) {
+                    return null;
+                }
+
+                // Don't take members inherited from object
+                var t = member.GetPythonType();
+                if (t is IPythonClassMember cm && cm.DeclaringType?.DeclaringModule.ModuleType == ModuleType.Builtins) {
                     return null;
                 }
             }
