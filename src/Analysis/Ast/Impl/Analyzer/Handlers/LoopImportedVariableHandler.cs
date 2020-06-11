@@ -27,7 +27,7 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
     internal sealed class LoopImportedVariableHandler : IImportedVariableHandler {
         private readonly Dictionary<AnalysisModuleKey, ModuleWalker> _walkers = new Dictionary<AnalysisModuleKey, ModuleWalker>();
         private readonly IReadOnlyDictionary<AnalysisModuleKey, PythonAst> _asts;
-        private readonly IReadOnlyDictionary<AnalysisModuleKey, IVariableCollection> _cachedVariables;
+        private readonly IDictionary<AnalysisModuleKey, IVariableCollection> _cachedVariables;
         private readonly IServiceContainer _services;
         private readonly Func<bool> _isCanceled;
 
@@ -35,7 +35,7 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
 
         public LoopImportedVariableHandler(in IServiceContainer services,
             in IReadOnlyDictionary<AnalysisModuleKey, PythonAst> asts,
-            in IReadOnlyDictionary<AnalysisModuleKey, IVariableCollection> cachedVariables,
+            in IDictionary<AnalysisModuleKey, IVariableCollection> cachedVariables,
             in Func<bool> isCanceled) {
 
             _services = services;
@@ -76,8 +76,9 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
                 return walker.Eval.GlobalScope?.Variables[name];
             }
 
+            _cachedVariables.TryGetValue(key, out var variables);
             if (!_asts.TryGetValue(key, out var ast)) {
-                return _cachedVariables.TryGetValue(key, out var variables) ? variables[name] : default;
+                return variables?[name];
             }
 
             _walkers[key] = walker = WalkModule(module, ast);
@@ -112,9 +113,13 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
             var eval = new ExpressionEval(_services, module, ast);
             var walker = new ModuleWalker(eval, this);
 
-            _walkers[new AnalysisModuleKey(module)] = walker;
+            var key = new AnalysisModuleKey(module);
+            _walkers[key] = walker;
+            walker.DeclareVariables(ast);
             ast.Walk(walker);
             walker.Complete();
+
+            _cachedVariables[key] = walker.Eval.GlobalScope.Variables;
             return walker;
         }
 

@@ -230,6 +230,45 @@ y = x
         }
 
         [TestMethod, Priority(0)]
+        public async Task ClosedFilesLoop() {
+            const string mod1Code = @"
+from .module2 import x2
+from .module3 import x3
+x1 = 1
+z2 = x2
+z2 = x3
+";
+            const string mod2Code = @"
+from .module1 import x1
+from .module3 import x3
+x2 = 1
+z1 = x1
+z3 = x3
+";
+            const string mod3Code = @"
+from .module1 import x1
+from .module2 import x2
+x3 = 1
+z1 = x1
+z2 = x2
+";
+            var uri1 = await TestData.CreateTestSpecificFileAsync("module1.py", mod2Code);
+            var uri2 = await TestData.CreateTestSpecificFileAsync("module2.py", mod2Code);
+            var uri3 = await TestData.CreateTestSpecificFileAsync("module3.py", mod3Code);
+
+            await CreateServicesAsync(PythonVersions.LatestAvailable3X, uri1.AbsolutePath);
+
+            var rdt = Services.GetService<IRunningDocumentTable>();
+            var doc1 = rdt.OpenDocument(uri1, mod1Code);
+            var analysis = await doc1.GetAnalysisAsync();
+            
+            var rs = new ReferenceSource(Services);
+            var refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(4, 1), ReferenceSearchOptions.All);
+
+            refs.Should().HaveCount(5);
+        }
+
+        [TestMethod, Priority(0)]
         public async Task UnrelatedFiles() {
             const string code = @"
 from bar import baz

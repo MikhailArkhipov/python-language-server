@@ -115,18 +115,6 @@ namespace Microsoft.Python.Analysis.Dependencies {
                 if (indexInToGroup == notVisited) {
                     path.Push(fromGroupIndex);
                     fromGroupIndex = toGroupIndex;
-                    continue;
-                }
-                
-                var toGroup = groupedEdges[toGroupIndex];
-                if (toGroup.Count == indexInToGroup) {
-                    continue;
-                }
-
-                var requiredPosition = edge.ToLocation;
-                var currentPosition = toGroup[indexInToGroup].FromLocation;
-                if (requiredPosition > currentPosition) {
-                    return false;
                 }
             }
         }

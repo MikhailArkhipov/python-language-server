@@ -149,10 +149,10 @@ namespace Microsoft.Python.Analysis.Analyzer {
             return Eval.CurrentScope == Eval.GlobalScope && ne.Name == AllVariableName;
         }
 
-        public override bool Walk(PythonAst node) {
-            Check.InvalidOperation(() => Ast == node, "walking wrong AST");
-            _cancellationToken.ThrowIfCancellationRequested();
-
+        public void DeclareVariables(PythonAst node) {
+            if (SymbolTable.Evaluators.Any()) {
+                return;
+            }
             // Collect basic information about classes and functions in order
             // to correctly process forward references. Does not determine
             // types yet since at this time imports or generic definitions
@@ -173,15 +173,24 @@ namespace Microsoft.Python.Analysis.Analyzer {
             // that might be referring to it in the right hand side.
             if (Ast.Body is SuiteStatement ste) {
                 foreach (var statement in ste.Statements.OfType<AssignmentStatement>()) {
-                    if (statement.Left.Count == 1 && statement.Left[0] is NameExpression leftNex && statement.Right is NameExpression rightNex) {
-                        var m = Eval.GetInScope<IPythonClassType>(rightNex.Name);
-                        if (m != null) {
-                            Eval.DeclareVariable(leftNex.Name, m, VariableSource.Declaration, leftNex);
+                    if (statement.Left.Count == 1 && statement.Left[0] is NameExpression leftNex) {
+                        if (statement.Right is NameExpression rightNex) {
+                            var m = Eval.GetInScope<IPythonClassType>(rightNex.Name);
+                            if (m != null) {
+                                Eval.DeclareVariable(leftNex.Name, m, VariableSource.Declaration, leftNex);
+                            }
+                        } else {
+                            Eval.DeclareVariable(leftNex.Name, Eval.UnknownType, VariableSource.Declaration, leftNex);
                         }
                     }
                 }
             }
+        }
 
+        public override bool Walk(PythonAst node) {
+            Check.InvalidOperation(() => Ast == node, "walking wrong AST");
+            _cancellationToken.ThrowIfCancellationRequested();
+            DeclareVariables(node);
             return base.Walk(node);
         }
 
