@@ -24,7 +24,6 @@ using System.Threading.Tasks;
 using Microsoft.Python.Analysis.Analyzer;
 using Microsoft.Python.Analysis.Analyzer.Evaluation;
 using Microsoft.Python.Analysis.Analyzer.Handlers;
-using Microsoft.Python.Analysis.Dependencies;
 using Microsoft.Python.Analysis.Diagnostics;
 using Microsoft.Python.Analysis.Documents;
 using Microsoft.Python.Analysis.Types;
@@ -148,9 +147,25 @@ namespace Microsoft.Python.Analysis.Modules {
         #endregion
 
         #region IMemberContainer
-        public virtual IMember GetMember(string name) => GlobalScope.Variables[name]?.Value;
 
-        public virtual IEnumerable<string> GetMemberNames() => GlobalScope.GetExportableVariableNames();
+        public virtual IMember GetMember(string name) {
+            // If module is being analyzed in a loop, delegate to the loop handler.
+            if (ModuleState == ModuleState.Analyzing && Eval != null) {
+                var v = Eval.GlobalScope?.Variables[name];
+                if (v != null) {
+                    return v.Value;
+                }
+            }
+            return GlobalScope.Variables[name]?.Value;
+        }
+
+        public virtual IEnumerable<string> GetMemberNames() {
+            // If module is being analyzed in a loop, delegate to the loop handler.
+            if (ModuleState == ModuleState.Analyzing && Eval != null) {
+                return Eval.GlobalScope?.Variables.Names;
+            }
+            return GlobalScope.GetExportableVariableNames();
+        }
 
         #endregion
 
@@ -423,6 +438,7 @@ namespace Microsoft.Python.Analysis.Modules {
 
                 Analysis = analysis;
                 GlobalScope = analysis.GlobalScope;
+                Eval = null;
 
                 // Derived classes can override OnAnalysisComplete if they want
                 // to perform additional actions on the completed analysis such
@@ -569,6 +585,8 @@ namespace Microsoft.Python.Analysis.Modules {
         public virtual SourceLocation IndexToLocation(int index) => this.GetAst()?.IndexToLocation(index) ?? default;
         public virtual int LocationToIndex(SourceLocation location) => this.GetAst()?.LocationToIndex(location) ?? default;
         #endregion
+
+        internal ExpressionEval Eval { get; set; }
 
         private void RemoveReferencesInModule(IPythonModule module) {
             if (module.GlobalScope?.Variables != null) {

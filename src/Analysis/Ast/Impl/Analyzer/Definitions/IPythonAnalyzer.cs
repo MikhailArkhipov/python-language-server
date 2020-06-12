@@ -63,11 +63,6 @@ namespace Microsoft.Python.Analysis.Analyzer {
         Task ResetAnalyzer();
 
         /// <summary>
-        /// Returns list of currently loaded modules.
-        /// </summary>
-        IReadOnlyList<IPythonModule> LoadedModules { get; }
-
-        /// <summary>
         /// Fires when analysis is complete.
         /// </summary>
         event EventHandler<AnalysisCompleteEventArgs> AnalysisComplete;

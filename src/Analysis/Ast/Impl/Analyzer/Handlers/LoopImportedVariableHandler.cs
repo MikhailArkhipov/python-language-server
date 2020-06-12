@@ -114,6 +114,10 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
             var walker = new ModuleWalker(eval, this);
 
             var key = new AnalysisModuleKey(module);
+            if (module is PythonModule m) {
+                m.Eval = walker.Eval;
+            }
+
             _walkers[key] = walker;
             walker.DeclareVariables(ast);
             ast.Walk(walker);

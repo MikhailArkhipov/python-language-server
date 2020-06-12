@@ -15,24 +15,35 @@
 
 using System.Linq;
 using Microsoft.Python.Analysis.Analyzer;
+using Microsoft.Python.Analysis.Modules;
 using Microsoft.Python.Analysis.Specializations.Typing;
 using Microsoft.Python.Analysis.Types;
-using Microsoft.Python.Analysis.Values;
 using Microsoft.Python.Core;
 
 namespace Microsoft.Python.Analysis {
     public static class PythonClassExtensions {
         public static void AddMemberReference(this IPythonType type, string name, IExpressionEvaluator eval, Location location) {
+            switch (type) {
+                case IPythonClassType cls:
+                    using (eval.OpenScope(cls)) {
+                        eval.LookupNameInScopes(name, out _, out var v, LookupOptions.Local);
+                        v?.AddReference(location);
+                    }
+                    return;
+                case PythonVariableModule pvm when pvm.Module is PythonModule pvmm && pvmm.Eval != null:
+                    pvmm.Eval.GlobalScope?.Variables[name]?.AddReference(location);
+                    return;
+                case PythonModule pm when pm.Eval != null:
+                    pm.Eval.GlobalScope?.Variables[name]?.AddReference(location);
+                    return;
+                case IPythonModule module when module.GlobalScope != null && module.GlobalScope.Variables.TryGetVariable(name, out var variable):
+                    variable.AddReference(location);
+                    return;
+            }
+
             var m = type.GetMember(name);
-            if (m is LocatedMember lm) {
+            if (m is LocatedMember lm && !(m is IPythonType t && t.DeclaringModule?.ModuleType == ModuleType.Builtins)) {
                 lm.AddReference(location);
-            } else if (type is IPythonClassType cls) {
-                using (eval.OpenScope(cls)) {
-                    eval.LookupNameInScopes(name, out _, out var v, LookupOptions.Local);
-                    v?.AddReference(location);
-                }
-            } else if (type is IPythonModule module && module.GlobalScope != null && module.GlobalScope.Variables.TryGetVariable(name, out var variable)) {
-                variable.AddReference(location);
             }
         }
 

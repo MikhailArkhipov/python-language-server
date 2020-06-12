@@ -665,9 +665,9 @@ namespace Microsoft.Python.Analysis.Dependencies {
                 => (_walker, _vertices, Values, VertexDepth, HasMissingDependencies) = (walker, vertices, values, depth, hasMissingDependencies);
 
             public void MarkWalked() {
-                foreach (var vertex in _vertices) {
-                    vertex.DependencyVertex.MarkWalked();
-                }
+                //foreach (var vertex in _vertices) {
+                //    vertex.DependencyVertex.MarkWalked();
+                //}
             }
 
             public void MoveNext() {

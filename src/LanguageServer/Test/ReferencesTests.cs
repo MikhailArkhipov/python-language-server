@@ -230,7 +230,49 @@ y = x
         }
 
         [TestMethod, Priority(0)]
-        public async Task ClosedFilesLoop() {
+        public async Task ClosedFilesImportLoop() {
+            const string mod1Code = @"
+import module2
+import module3
+x1 = 1
+z2 = module2.x2
+z2 = module3.x3
+";
+            const string mod2Code = @"
+import module1
+import module3
+x2 = 1
+z1 = module1.x1
+z3 = module3.x3
+";
+            const string mod3Code = @"
+import module1
+import module2
+x3 = 1
+z1 = module1.x1
+z2 = module2.x2
+";
+            var uri1 = await TestData.CreateTestSpecificFileAsync("module1.py", mod2Code);
+            await TestData.CreateTestSpecificFileAsync("module2.py", mod2Code);
+            await TestData.CreateTestSpecificFileAsync("module3.py", mod3Code);
+
+            await CreateServicesAsync(PythonVersions.LatestAvailable3X, uri1.AbsolutePath);
+
+            var rdt = Services.GetService<IRunningDocumentTable>();
+            var doc1 = rdt.OpenDocument(uri1, mod1Code);
+            var analysis = await doc1.GetAnalysisAsync();
+            
+            var rs = new ReferenceSource(Services);
+            var refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(4, 1), ReferenceSearchOptions.All);
+            refs.Should().HaveCount(3);
+            refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(5, 14), ReferenceSearchOptions.All);
+            refs.Should().HaveCount(3);
+            refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(6, 14), ReferenceSearchOptions.All);
+            refs.Should().HaveCount(3);
+        }
+
+        [TestMethod, Priority(0)]
+        public async Task ClosedFilesFromImportLoop() {
             const string mod1Code = @"
 from .module2 import x2
 from .module3 import x3
@@ -253,18 +295,21 @@ z1 = x1
 z2 = x2
 ";
             var uri1 = await TestData.CreateTestSpecificFileAsync("module1.py", mod2Code);
-            var uri2 = await TestData.CreateTestSpecificFileAsync("module2.py", mod2Code);
-            var uri3 = await TestData.CreateTestSpecificFileAsync("module3.py", mod3Code);
+            await TestData.CreateTestSpecificFileAsync("module2.py", mod2Code);
+            await TestData.CreateTestSpecificFileAsync("module3.py", mod3Code);
 
             await CreateServicesAsync(PythonVersions.LatestAvailable3X, uri1.AbsolutePath);
 
             var rdt = Services.GetService<IRunningDocumentTable>();
             var doc1 = rdt.OpenDocument(uri1, mod1Code);
             var analysis = await doc1.GetAnalysisAsync();
-            
+
             var rs = new ReferenceSource(Services);
             var refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(4, 1), ReferenceSearchOptions.All);
-
+            refs.Should().HaveCount(5);
+            refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(5, 6), ReferenceSearchOptions.All);
+            refs.Should().HaveCount(5);
+            refs = await rs.FindAllReferencesAsync(analysis.Document.Uri, new SourceLocation(6, 6), ReferenceSearchOptions.All);
             refs.Should().HaveCount(5);
         }
 

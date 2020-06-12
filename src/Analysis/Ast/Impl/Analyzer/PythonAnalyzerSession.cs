@@ -374,27 +374,27 @@ namespace Microsoft.Python.Analysis.Analyzer {
             }
 
             var startingKeys = LocationLoopResolver<AnalysisModuleKey>.FindStartingItems(imports);
-            var variableHandler = new LoopImportedVariableHandler(_services, asts, cachedVariables, () => false);
+            var loopImportedVariableHandler = new LoopImportedVariableHandler(_services, asts, cachedVariables, () => false);
             foreach (var key in startingKeys) {
                 if (asts.TryGetValue(key, out var startingAst) && entries.TryGetValue(key, out var me)) {
-                    variableHandler.WalkModule(me.Module, startingAst);
+                    loopImportedVariableHandler.WalkModule(me.Module, startingAst);
                 }
             }
 
-            foreach (var walker in variableHandler.Walkers) {
+            foreach (var walker in loopImportedVariableHandler.Walkers) {
                 asts.Remove(new AnalysisModuleKey(walker.Module));
             }
 
             while (asts.Count > 0) {
                 var (moduleKey, ast) = asts.First();
-                variableHandler.WalkModule(entries[moduleKey].Module, ast);
+                loopImportedVariableHandler.WalkModule(entries[moduleKey].Module, ast);
 
-                foreach (var walker in variableHandler.Walkers) {
+                foreach (var walker in loopImportedVariableHandler.Walkers) {
                     asts.Remove(new AnalysisModuleKey(walker.Module));
                 }
             }
 
-            foreach (var walker in variableHandler.Walkers) {
+            foreach (var walker in loopImportedVariableHandler.Walkers) {
                 var module = (IDocument)walker.Module;
                 var moduleKey = new AnalysisModuleKey(module);
                 if (entries.TryGetValue(moduleKey, out var e)) {
@@ -403,7 +403,7 @@ namespace Microsoft.Python.Analysis.Analyzer {
                 }
             }
 
-            loopNode.MarkWalked();
+            //loopNode.MarkWalked();
             LogCompleted(loopNode, entries.Values.Select(v => v.Module), stopWatch, startTime);
         }
 
