@@ -29,11 +29,9 @@ using ErrorCodes = Microsoft.Python.Analysis.Diagnostics.ErrorCodes;
 
 namespace Microsoft.Python.Analysis.Analyzer.Handlers {
     internal sealed partial class ImportHandler : StatementHandler {
-        private readonly IImportedVariableHandler _importedVariableHandler;
         private readonly Dictionary<string, PythonVariableModule> _variableModules = new Dictionary<string, PythonVariableModule>();
 
-        public ImportHandler(AnalysisWalker walker, in IImportedVariableHandler importedVariableHandler) : base(walker) {
-            _importedVariableHandler = importedVariableHandler;
+        public ImportHandler(AnalysisWalker walker) : base(walker) {
         }
 
         public bool HandleImport(ImportStatement node) {
@@ -70,7 +68,6 @@ namespace Microsoft.Python.Analysis.Analyzer.Handlers {
                 }
 
                 resolvedModules[i] = (nameExpression.Name, lastModule);
-                _importedVariableHandler.EnsureModule(lastModule);
             }
 
             // "import fob.oar.baz as baz" is handled as baz = import_module('fob.oar.baz')

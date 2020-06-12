@@ -18,7 +18,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Microsoft.Python.Analysis.Analyzer.Evaluation;
-using Microsoft.Python.Analysis.Analyzer.Handlers;
 using Microsoft.Python.Analysis.Documents;
 using Microsoft.Python.Analysis.Types;
 using Microsoft.Python.Analysis.Types.Collections;
@@ -38,7 +37,7 @@ namespace Microsoft.Python.Analysis.Analyzer {
         private int _allReferencesCount;
         private bool _allIsUsable = true;
 
-        public ModuleWalker(ExpressionEval eval, IImportedVariableHandler importedVariableHandler) : base(eval, importedVariableHandler) {
+        public ModuleWalker(ExpressionEval eval) : base(eval) {
             _stubAnalysis = Module.Stub is IDocument doc ? doc.GetAnyAnalysis() : null;
             _cancellationToken = CancellationToken.None;
         }

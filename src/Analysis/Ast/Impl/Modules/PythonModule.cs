@@ -409,7 +409,7 @@ namespace Microsoft.Python.Analysis.Modules {
 
         public ModuleWalker Analyze(PythonAst ast) {
             var eval = new ExpressionEval(Services, this, ast);
-            var walker = new ModuleWalker(eval, SimpleImportedVariableHandler.Instance);
+            var walker = new ModuleWalker(eval);
             ast.Walk(walker);
             walker.Complete();
             return walker;
