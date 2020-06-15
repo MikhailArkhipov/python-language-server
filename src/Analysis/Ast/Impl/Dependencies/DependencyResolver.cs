@@ -18,7 +18,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Python.Analysis.Analyzer;
 using Microsoft.Python.Core;
 using Microsoft.Python.Core.Collections;
 using Microsoft.Python.Core.Threading;
@@ -222,7 +221,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
             }
 
             var outgoingVertices = new HashSet<int>[vertices.Count];
-            foreach (var vertex in vertices.Where(vertex => vertex != null)) {
+            foreach (var vertex in vertices.ExcludeDefault()) {
                 if (version != _version) {
                     return false;
                 }
@@ -245,7 +244,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
                     return false;
                 }
 
-                foreach (var vertex in vertices.Where(vertex => vertex != null && !vertex.IsSealed)) {
+                foreach (var vertex in vertices.Where(v => v != null && !v.IsSealed)) {
                     vertex.Seal(outgoingVertices[vertex.Index]);
                 }
 
@@ -423,7 +422,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
                     var secondPassVertex = vertex.CreateSecondPassVertex();
                     var loopNumber = vertex.LoopNumber;
                     if (secondPassLoops[loopNumber] == null) {
-                        secondPassLoops[loopNumber] = new List<WalkingVertex<TKey, TValue>> { secondPassVertex };
+                        secondPassLoops[loopNumber] = new List<WalkingVertex<TKey, TValue>> {secondPassVertex};
                     } else {
                         secondPassLoops[loopNumber].Add(secondPassVertex);
                     }
@@ -432,7 +431,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
                 }
 
                 if (version != _version) {
-                    totalNodesCount = default;
+                    totalNodesCount = 0;
                     return false;
                 }
 
@@ -485,7 +484,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
                 }
 
                 if (version != _version) {
-                    totalNodesCount = default;
+                    totalNodesCount = 0;
                     return false;
                 }
 
@@ -518,10 +517,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
             var missingIndicesHashSet = new HashSet<int>();
 
             // First, go through all the vertices and find those that have missing incoming edges
-            foreach (var vertex in vertices) {
-                if (vertex == null) {
-                    continue;
-                }
+            foreach (var vertex in vertices.ExcludeDefault()) {
 
                 foreach (var incoming in vertex.Incoming) {
                     if (vertices[incoming] == null) {
@@ -564,7 +560,7 @@ namespace Microsoft.Python.Analysis.Dependencies {
 
             lock (_syncObj) {
                 foreach (var (key, index) in _keys) {
-                    if (missingIndicesHashSet.Contains(index)/* && depths[index] <= walkerDepthLimit*/) {
+                    if (missingIndicesHashSet.Contains(index) /* && depths[index] <= walkerDepthLimit*/) {
                         missingKeys = missingKeys.Add(key);
                     }
                 }
@@ -676,14 +672,21 @@ namespace Microsoft.Python.Analysis.Dependencies {
             public TValue Value => _vertex.DependencyVertex.Value;
             public int VertexDepth { get; }
             public bool HasMissingDependencies => _vertex.HasMissingDependencies;
-            public bool HasOnlyWalkedDependencies => _vertex.HasOnlyWalkedIncoming;
+            public bool HasOnlyWalkedDependencies => _vertex.HasOnlyWalkedIncoming && _vertex.SecondPass == null;
             public bool IsWalkedWithDependencies => _vertex.HasOnlyWalkedIncoming && _vertex.DependencyVertex.IsWalked;
             public bool IsValidVersion => _walker.IsValidVersion;
 
-            public DependencyChainNode(DependencyChainWalker walker, WalkingVertex<TKey, TValue> vertex, int depth) => (_walker, _vertex, VertexDepth) = (walker, vertex, depth);
+            public DependencyChainNode(DependencyChainWalker walker, WalkingVertex<TKey, TValue> vertex, int depth) {
+                _walker = walker;
+                _vertex = vertex;
+                VertexDepth = depth;
+            }
 
-            public void MarkWalked() => _vertex.DependencyVertex.MarkWalked();
-
+            public void MarkWalked() {
+                if (_vertex.SecondPass == null) {
+                    _vertex.DependencyVertex.MarkWalked();
+                }
+            }
             public void MoveNext() => Interlocked.Exchange(ref _walker, null)?.MoveNext(_vertex);
         }
     }
